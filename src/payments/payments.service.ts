@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { Request, Response } from 'express';
-import { metadata } from 'reflect-metadata/no-conflict';
 import { envs } from 'src/config';
 import { PaymentSessionDto } from 'src/dto/payment-session.dto';
 import Stripe from 'stripe';
@@ -34,8 +33,8 @@ export class PaymentsService {
             },
             line_items: lineItems,
             mode: 'payment',
-            success_url: 'http://localhost:3003/payments/success',
-            cancel_url: 'http://localhost:3003/payments/cancelled'
+            success_url: envs.stripeSuccessUrl,
+            cancel_url: envs.stripeCancelUrl
         });
 
         return session;
@@ -49,7 +48,7 @@ export class PaymentsService {
         // Testing
         // const endpointSecret = 'whsec_5315cbe49b257bab021a8b5495b912457b56a9f9c8ff452b2f3e532b31602945';
 
-        const endpointSecret = 'whsec_b5gmUB4ksG2zFvIR6TswMVZFdokLgyqi';
+        const endpointSecret = envs.stripeEndpointSecret;
 
         try {
             event = this.stripe.webhooks.constructEvent(
@@ -66,7 +65,7 @@ export class PaymentsService {
         switch (event.type) {
             case 'charge.succeeded':
                 const chargeSucceeded = event.data.object;
-                
+
                 // TODO: Call the microservice
                 console.log({
                     metadata: chargeSucceeded.metadata,
