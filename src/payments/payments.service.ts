@@ -11,7 +11,7 @@ export class PaymentsService {
     async createPaymentSession(paymentSessionDto: PaymentSessionDto) {
         const { currency, items, orderId } = paymentSessionDto;
 
-        const lineItems = items.map((item: { name: string; price: number; quantity: number }) => {
+        const lineItems = items.map(item => {
             return {
                 price_data: {
                     currency: currency,
@@ -41,7 +41,11 @@ export class PaymentsService {
     }
 
     async stripeWebhook(req: Request, res: Response) {
-        const sig = req.headers['stripe-signature'] as string;
+        const sig = req.headers['stripe-signature'];
+
+        if(!sig) {
+            return res.status(400).send('Webhook Error: Missing stripe-signature header');
+        }
 
         let event: Stripe.Event;
 
@@ -49,6 +53,7 @@ export class PaymentsService {
         // const endpointSecret = 'whsec_5315cbe49b257bab021a8b5495b912457b56a9f9c8ff452b2f3e532b31602945';
 
         const endpointSecret = envs.stripeEndpointSecret;
+        
 
         try {
             event = this.stripe.webhooks.constructEvent(
