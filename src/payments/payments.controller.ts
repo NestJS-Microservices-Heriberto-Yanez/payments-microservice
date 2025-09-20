@@ -8,10 +8,14 @@ import { MessagePattern } from '@nestjs/microservices';
 export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) { }
 
-  // @Post('create-payment-session')s
+  // @Post('create-payment-session')
   @MessagePattern('create.payment.session')
   createPaymentSession(@Body() paymentSessionDto: PaymentSessionDto) {
-    return this.paymentsService.createPaymentSession(paymentSessionDto);
+    // return this.paymentsService.createPaymentSession(paymentSessionDto);
+
+    return {
+      paymentSessionDto
+    }
   }
 
   @Get('success')

@@ -25,7 +25,7 @@ export class PaymentsService {
         })
 
         const session = await this.stripe.checkout.sessions.create({
-            // Set my ID order here
+            // Set my order ID here
             payment_intent_data: {
                 metadata: {
                     orderId
