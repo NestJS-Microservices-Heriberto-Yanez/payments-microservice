@@ -1,8 +1,8 @@
-import { Body, Controller, Get, Post, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res } from '@nestjs/common';
 import { PaymentsService } from './payments.service';
-import { PaymentSessionDto } from 'src/dto/payment-session.dto';
+import { PaymentSessionDto } from 'src/payments/dto/payment-session.dto';
 import type { Request, Response } from 'express';
-import { MessagePattern } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller('payments')
 export class PaymentsController {
@@ -10,12 +10,8 @@ export class PaymentsController {
 
   // @Post('create-payment-session')
   @MessagePattern('create.payment.session')
-  createPaymentSession(@Body() paymentSessionDto: PaymentSessionDto) {
-    // return this.paymentsService.createPaymentSession(paymentSessionDto);
-
-    return {
-      paymentSessionDto
-    }
+  createPaymentSession(@Payload() paymentSessionDto: PaymentSessionDto) {
+    return this.paymentsService.createPaymentSession(paymentSessionDto);
   }
 
   @Get('success')
@@ -26,7 +22,7 @@ export class PaymentsController {
     }
   }
 
-  @Get('cancelled')
+  @Get('cancel')
   cancel() {
     return {
       ok: false,

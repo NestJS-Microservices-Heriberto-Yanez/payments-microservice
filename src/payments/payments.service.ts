@@ -1,17 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { Request, Response } from 'express';
-import { envs } from 'src/config';
-import { PaymentSessionDto } from 'src/dto/payment-session.dto';
+import { envs, NATS_SERVICE } from 'src/config';
+import { PaymentSessionDto } from 'src/payments/dto/payment-session.dto';
 import Stripe from 'stripe';
 
 @Injectable()
 export class PaymentsService {
     private readonly stripe = new Stripe(envs.stripeSecret);
+    private readonly logger = new Logger('PaymentService');
+
+    constructor(
+        @Inject(NATS_SERVICE) private readonly client: ClientProxy
+    ) { }
 
     async createPaymentSession(paymentSessionDto: PaymentSessionDto) {
         const { currency, items, orderId } = paymentSessionDto;
 
-        const lineItems = items.map(item => {
+        const lineItems = items.map((item) => {
             return {
                 price_data: {
                     currency: currency,
@@ -37,13 +43,18 @@ export class PaymentsService {
             cancel_url: envs.stripeCancelUrl
         });
 
-        return session;
+        // return session;
+        return {
+            cancelUrl: session.cancel_url,
+            successUrl: session.success_url,
+            url: session.url
+        }
     }
 
     async stripeWebhook(req: Request, res: Response) {
         const sig = req.headers['stripe-signature'];
 
-        if(!sig) {
+        if (!sig) {
             return res.status(400).send('Webhook Error: Missing stripe-signature header');
         }
 
@@ -53,7 +64,7 @@ export class PaymentsService {
         // const endpointSecret = 'whsec_5315cbe49b257bab021a8b5495b912457b56a9f9c8ff452b2f3e532b31602945';
 
         const endpointSecret = envs.stripeEndpointSecret;
-        
+
 
         try {
             event = this.stripe.webhooks.constructEvent(
@@ -71,11 +82,14 @@ export class PaymentsService {
             case 'charge.succeeded':
                 const chargeSucceeded = event.data.object;
 
-                // TODO: Call the microservice
-                console.log({
-                    metadata: chargeSucceeded.metadata,
-                    orderId: chargeSucceeded.metadata.orderId
-                });
+                const payload = {
+                    stripePaymentId: chargeSucceeded.id,
+                    orderId: chargeSucceeded.metadata.orderId,
+                    receiptUrl: chargeSucceeded.receipt_url
+                }
+
+                // this.logger.log({ payload })
+                this.client.emit('payment.succeeded', payload);
 
                 break;
 
@@ -83,6 +97,6 @@ export class PaymentsService {
                 console.log(`Event ${event} no handled`);
         }
 
-        return res.status(200).json({ sig })
+        return res.status(200).json({ sig });
     }
 }
